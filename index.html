@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Markt Überblick</title>
+  <style>
+    body {
+      background: transparent;
+      color: white;
+      font-family: 'Inter', sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    canvas { width: 95vw; height: 45vh; }
+    .container { text-align: center; }
+    .title { font-size: 0.8rem; margin-bottom: 5px; opacity: 0.7; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="title">BTC | ETH | GOLD | OIL</div>
+    <canvas id="chart"></canvas>
+    <p id="comment"></p>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    async function getPriceData() {
+      const urls = {
+        BTC: "https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=30",
+        ETH: "https://api.coingecko.com/api/v3/coins/ethereum/market_chart?vs_currency=usd&days=30",
+        GOLD: "https://api.metals.live/v1/spot/gold",
+        OIL: "https://api.metals.live/v1/spot/oil"
+      };
+
+      try {
+        const [btc, eth, gold, oil] = await Promise.all([
+          fetch(urls.BTC).then(r => r.json()),
+          fetch(urls.ETH).then(r => r.json()),
+          fetch(urls.GOLD).then(r => r.json()),
+          fetch(urls.OIL).then(r => r.json())
+        ]);
+
+        const ctx = document.getElementById('chart').getContext('2d');
+        const labels = btc.prices.map(p => new Date(p[0]).toLocaleDateString('de-DE', { day: '2-digit', month: 'short' }));
+        const data = {
+          labels,
+          datasets: [
+            { label: 'BTC', data: btc.prices.map(p => p[1]), borderColor: '#ff4d4d', borderWidth: 1 },
+            { label: 'ETH', data: eth.prices.map(p => p[1]), borderColor: '#4da6ff', borderWidth: 1 },
+            { label: 'GOLD', data: gold.map(p => p[1]), borderColor: '#ffd633', borderWidth: 1 },
+            { label: 'OIL', data: oil.map(p => p[1]), borderColor: '#e6e6e6', borderWidth: 1 }
+          ]
+        };
+
+        new Chart(ctx, {
+          type: 'line',
+          data,
+          options: {
+            plugins: { legend: { labels: { color: 'white', font: { size: 10 } } } },
+            scales: { x: { ticks: { color: '#aaa' } }, y: { ticks: { color: '#aaa' } } }
+          }
+        });
+
+        const btcChange = ((btc.prices.at(-1)[1] / btc.prices[0][1] - 1) * 100).toFixed(1);
+        const ethChange = ((eth.prices.at(-1)[1] / eth.prices[0][1] - 1) * 100).toFixed(1);
+
+        const comment = btcChange > 0
+          ? "Bitcoin steigt leicht, Markt wirkt optimistisch."
+          : "Bitcoin sinkt etwas, Stimmung bleibt vorsichtig.";
+        document.getElementById("comment").innerText = comment;
+
+      } catch (e) {
+        document.getElementById("comment").innerText = "Konnte Daten nicht laden.";
+      }
+    }
+
+    getPriceData();
+    setInterval(getPriceData, 600000); // alle 10 Minuten
+  </script>
+</body>
+</html>
