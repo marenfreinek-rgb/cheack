@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Marktübersicht</title>
+<title>Marktübersicht (Demo)</title>
 <style>
   body {
     margin: 0;
@@ -23,61 +23,68 @@
     width: 100%;
     height: 40px;
   }
-  .price { font-size: .8rem; opacity: .8; }
-  .comment { font-size: .9rem; margin-top: .3rem; }
+  .price {
+    font-size: .8rem;
+    opacity: .8;
+  }
+  .comment {
+    font-size: .9rem;
+    margin-top: .3rem;
+  }
 </style>
 </head>
 <body>
-  <div class="card"><canvas id="btc"></canvas><div class="comment" id="btcText"></div><div class="price" id="btcPrice"></div></div>
-  <div class="card"><canvas id="eth"></canvas><div class="comment" id="ethText"></div><div class="price" id="ethPrice"></div></div>
-  <div class="card"><canvas id="gold"></canvas><div class="comment" id="goldText"></div><div class="price" id="goldPrice"></div></div>
-  <div class="card"><canvas id="oil"></canvas><div class="comment" id="oilText"></div><div class="price" id="oilPrice"></div></div>
+  <div class="card">
+    <canvas id="btc"></canvas>
+    <div class="comment">BTC zeigt heute stabile Bewegung.</div>
+    <div class="price">62 350 €</div>
+  </div>
+  <div class="card">
+    <canvas id="eth"></canvas>
+    <div class="comment">ETH bleibt ruhig im Markt.</div>
+    <div class="price">2 970 €</div>
+  </div>
+  <div class="card">
+    <canvas id="gold"></canvas>
+    <div class="comment">Gold hält sich seit Tagen konstant.</div>
+    <div class="price">2 180 €</div>
+  </div>
+  <div class="card">
+    <canvas id="oil"></canvas>
+    <div class="comment">Öl zeigt leichte Schwankungen.</div>
+    <div class="price">83 €</div>
+  </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-// тут ти підставиш запити до CoinGecko або іншого джерела
-// прикладна логіка така:
-async function getData(id) {
-  const res = await fetch(`https://api.coingecko.com/api/v3/coins/${id}/market_chart?vs_currency=eur&days=30`);
-  return res.json();
-}
-function drawChart(id, color, data) {
+const demo = (points, amplitude) =>
+  Array.from({length: points}, (_, i) => Math.sin(i/5)+Math.random()*amplitude);
+
+function draw(id, color, data){
   new Chart(document.getElementById(id), {
     type: 'line',
     data: {
-      labels: data.prices.map(p => new Date(p[0])),
-      datasets: [{ data: data.prices.map(p => p[1]), borderColor: color, tension: .3, borderWidth: 1, pointRadius: 0 }]
+      labels: data.map((_,i)=>i),
+      datasets: [{
+        data,
+        borderColor: color,
+        borderWidth: 1,
+        tension: 0.3,
+        pointRadius: 0
+      }]
     },
-    options: { scales: { x:{display:false}, y:{display:false}}, plugins:{legend:{display:false}}, animation:{duration:800} }
+    options: {
+      animation: {duration: 1000},
+      scales: {x:{display:false},y:{display:false}},
+      plugins: {legend:{display:false}}
+    }
   });
 }
-function makeComment(change) {
-  if (change > 2) return "zeigt klare Aufwärtsdynamik.";
-  if (change > 0) return "bleibt leicht im Plus.";
-  if (change > -2) return "verhält sich stabil.";
-  return "steht unter Druck.";
-}
-async function update() {
-  const btc = await getData('bitcoin');
-  const eth = await getData('ethereum');
-  const gold = await getData('tether-gold');
-  const oil = await getData('crude-oil');
-  const assets = [
-    { id:'btc', data:btc, color:'red', label:'BTC' },
-    { id:'eth', data:eth, color:'blue', label:'ETH' },
-    { id:'gold', data:gold, color:'gold', label:'Gold' },
-    { id:'oil', data:oil, color:'white', label:'Öl' }
-  ];
-  assets.forEach(a=>{
-    drawChart(a.id,a.color,a.data);
-    const start=a.data.prices[0][1], end=a.data.prices.at(-1)[1];
-    const change=((end-start)/start*100).toFixed(1);
-    document.getElementById(a.id+"Text").textContent=`${a.label} ${makeComment(change)}`;
-    document.getElementById(a.id+"Price").textContent=`${end.toFixed(2)} €`;
-  });
-}
-update();
-setInterval(update, 10*60*1000);
+
+draw("btc","red",demo(60,0.3));
+draw("eth","blue",demo(60,0.25));
+draw("gold","gold",demo(60,0.2));
+draw("oil","white",demo(60,0.35));
 </script>
 </body>
 </html>
