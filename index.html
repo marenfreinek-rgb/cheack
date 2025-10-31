@@ -1,86 +1,83 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Markt Überblick</title>
-  <style>
-    body {
-      background: transparent;
-      color: white;
-      font-family: 'Inter', sans-serif;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      margin: 0;
-    }
-    canvas { width: 95vw; height: 45vh; }
-    .container { text-align: center; }
-    .title { font-size: 0.8rem; margin-bottom: 5px; opacity: 0.7; }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Marktübersicht</title>
+<style>
+  body {
+    margin: 0;
+    background: transparent;
+    color: #ccc;
+    font-family: "Inter", sans-serif;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: repeat(2, auto);
+    gap: 1rem;
+    padding: .5rem;
+  }
+  .card {
+    text-align: center;
+  }
+  canvas {
+    width: 100%;
+    height: 40px;
+  }
+  .price { font-size: .8rem; opacity: .8; }
+  .comment { font-size: .9rem; margin-top: .3rem; }
+</style>
 </head>
 <body>
-  <div class="container">
-    <div class="title">BTC | ETH | GOLD | OIL</div>
-    <canvas id="chart"></canvas>
-    <p id="comment"></p>
-  </div>
+  <div class="card"><canvas id="btc"></canvas><div class="comment" id="btcText"></div><div class="price" id="btcPrice"></div></div>
+  <div class="card"><canvas id="eth"></canvas><div class="comment" id="ethText"></div><div class="price" id="ethPrice"></div></div>
+  <div class="card"><canvas id="gold"></canvas><div class="comment" id="goldText"></div><div class="price" id="goldPrice"></div></div>
+  <div class="card"><canvas id="oil"></canvas><div class="comment" id="oilText"></div><div class="price" id="oilPrice"></div></div>
 
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script>
-    async function getPriceData() {
-      const urls = {
-        BTC: "https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=30",
-        ETH: "https://api.coingecko.com/api/v3/coins/ethereum/market_chart?vs_currency=usd&days=30",
-        GOLD: "https://api.metals.live/v1/spot/gold",
-        OIL: "https://api.metals.live/v1/spot/oil"
-      };
-
-      try {
-        const [btc, eth, gold, oil] = await Promise.all([
-          fetch(urls.BTC).then(r => r.json()),
-          fetch(urls.ETH).then(r => r.json()),
-          fetch(urls.GOLD).then(r => r.json()),
-          fetch(urls.OIL).then(r => r.json())
-        ]);
-
-        const ctx = document.getElementById('chart').getContext('2d');
-        const labels = btc.prices.map(p => new Date(p[0]).toLocaleDateString('de-DE', { day: '2-digit', month: 'short' }));
-        const data = {
-          labels,
-          datasets: [
-            { label: 'BTC', data: btc.prices.map(p => p[1]), borderColor: '#ff4d4d', borderWidth: 1 },
-            { label: 'ETH', data: eth.prices.map(p => p[1]), borderColor: '#4da6ff', borderWidth: 1 },
-            { label: 'GOLD', data: gold.map(p => p[1]), borderColor: '#ffd633', borderWidth: 1 },
-            { label: 'OIL', data: oil.map(p => p[1]), borderColor: '#e6e6e6', borderWidth: 1 }
-          ]
-        };
-
-        new Chart(ctx, {
-          type: 'line',
-          data,
-          options: {
-            plugins: { legend: { labels: { color: 'white', font: { size: 10 } } } },
-            scales: { x: { ticks: { color: '#aaa' } }, y: { ticks: { color: '#aaa' } } }
-          }
-        });
-
-        const btcChange = ((btc.prices.at(-1)[1] / btc.prices[0][1] - 1) * 100).toFixed(1);
-        const ethChange = ((eth.prices.at(-1)[1] / eth.prices[0][1] - 1) * 100).toFixed(1);
-
-        const comment = btcChange > 0
-          ? "Bitcoin steigt leicht, Markt wirkt optimistisch."
-          : "Bitcoin sinkt etwas, Stimmung bleibt vorsichtig.";
-        document.getElementById("comment").innerText = comment;
-
-      } catch (e) {
-        document.getElementById("comment").innerText = "Konnte Daten nicht laden.";
-      }
-    }
-
-    getPriceData();
-    setInterval(getPriceData, 600000); // alle 10 Minuten
-  </script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// тут ти підставиш запити до CoinGecko або іншого джерела
+// прикладна логіка така:
+async function getData(id) {
+  const res = await fetch(`https://api.coingecko.com/api/v3/coins/${id}/market_chart?vs_currency=eur&days=30`);
+  return res.json();
+}
+function drawChart(id, color, data) {
+  new Chart(document.getElementById(id), {
+    type: 'line',
+    data: {
+      labels: data.prices.map(p => new Date(p[0])),
+      datasets: [{ data: data.prices.map(p => p[1]), borderColor: color, tension: .3, borderWidth: 1, pointRadius: 0 }]
+    },
+    options: { scales: { x:{display:false}, y:{display:false}}, plugins:{legend:{display:false}}, animation:{duration:800} }
+  });
+}
+function makeComment(change) {
+  if (change > 2) return "zeigt klare Aufwärtsdynamik.";
+  if (change > 0) return "bleibt leicht im Plus.";
+  if (change > -2) return "verhält sich stabil.";
+  return "steht unter Druck.";
+}
+async function update() {
+  const btc = await getData('bitcoin');
+  const eth = await getData('ethereum');
+  const gold = await getData('tether-gold');
+  const oil = await getData('crude-oil');
+  const assets = [
+    { id:'btc', data:btc, color:'red', label:'BTC' },
+    { id:'eth', data:eth, color:'blue', label:'ETH' },
+    { id:'gold', data:gold, color:'gold', label:'Gold' },
+    { id:'oil', data:oil, color:'white', label:'Öl' }
+  ];
+  assets.forEach(a=>{
+    drawChart(a.id,a.color,a.data);
+    const start=a.data.prices[0][1], end=a.data.prices.at(-1)[1];
+    const change=((end-start)/start*100).toFixed(1);
+    document.getElementById(a.id+"Text").textContent=`${a.label} ${makeComment(change)}`;
+    document.getElementById(a.id+"Price").textContent=`${end.toFixed(2)} €`;
+  });
+}
+update();
+setInterval(update, 10*60*1000);
+</script>
 </body>
 </html>
